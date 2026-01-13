@@ -47,7 +47,7 @@ let tasksReady = false;
 
 async function addTask(name, dueDate) {
   try {
-    const res = await fetch("http://localhost:3000/api/tasks", {
+    const res = await fetch("/api/tasks", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -84,7 +84,7 @@ async function toggleTask(task) {
   const wasCompleted = task.completed;
   
   try {
-    const res = await fetch(`http://localhost:3000/api/tasks/${task.id}`, {
+    const res = await fetch(`/api/tasks/${task.id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -129,7 +129,7 @@ async function deleteTask(index) {
 
   const taskName = task.name;
   try {
-    const res = await fetch(`http://localhost:3000/api/tasks/${task.id}`, {
+    const res = await fetch(`/api/tasks/${task.id}`, {
       method: "DELETE",
     });
 
