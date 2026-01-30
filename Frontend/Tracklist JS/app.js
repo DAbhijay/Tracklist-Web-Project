@@ -324,6 +324,22 @@ if (document.readyState === 'loading') {
   }
 }
 
+document.addEventListener('keydown', (e) => {
+  // Alt+G for Groceries, Alt+T for Tasks, Alt+H for Home
+  if (e.altKey && !e.ctrlKey && !e.metaKey) {
+    if (e.key === 'g') {
+      e.preventDefault();
+      showPage('groceries');
+    } else if (e.key === 't') {
+      e.preventDefault();
+      showPage('tasks');
+    } else if (e.key === 'h') {
+      e.preventDefault();
+      showPage('home');
+    }
+  }
+});
+
 window.onGroceriesReady = checkInit;
 window.onTasksReady = checkInit;
 

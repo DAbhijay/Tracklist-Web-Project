@@ -34,13 +34,11 @@ let groceriesReady = false;
         };
       });
 
-      // Only save if migration was needed (don't save on every load)
       if (needsMigration) {
         try {
           await saveGroceries(groceries);
         } catch (saveError) {
           console.warn("Could not save migrated groceries:", saveError);
-          // Don't fail initialization if save fails
         }
       }
     } else {
@@ -51,7 +49,6 @@ let groceriesReady = false;
     if (window.onGroceriesReady) window.onGroceriesReady();
   } catch (error) {
     console.warn("Error loading groceries (using empty list):", error.message);
-    // Silently fail - use empty array
     groceries = [];
     groceriesReady = true;
     if (window.onGroceriesReady) window.onGroceriesReady();
@@ -60,7 +57,7 @@ let groceriesReady = false;
 
 async function addGrocery(name) {
   try {
-    const res = await fetch("/api/groceries", {
+    const res = await fetch("http://localhost:3000/api/groceries", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -74,7 +71,6 @@ async function addGrocery(name) {
     }
 
     const newItem = await res.json();
-    // If the API returns the full array, use it; otherwise add to local array
     if (Array.isArray(newItem)) {
       groceries = newItem;
     } else {
@@ -93,38 +89,84 @@ async function addGrocery(name) {
   }
 }
 
-async function recordPurchase(grocery) {
-  if (boughtToday(grocery.purchases)) return;
+
+async function togglePurchase(grocery, isChecked) {
+  const today = new Date().toISOString();
+  const todayDate = today.split('T')[0];
   
   try {
-    const res = await fetch(`/api/groceries/${encodeURIComponent(grocery.name)}/purchase`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    if (isChecked) {
 
-    if (!res.ok) {
-      throw new Error("Failed to record purchase");
-    }
+      const res = await fetch(`http://localhost:3000/api/groceries/${encodeURIComponent(grocery.name)}/purchase`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
-    const updatedItem = await res.json();
-    // Update local grocery item
-    const index = groceries.findIndex(g => g.name === grocery.name);
-    if (index !== -1) {
-      groceries[index] = updatedItem;
-    }
-    
-    if (typeof showToast !== 'undefined') {
-      showToast(`Recorded purchase of "${grocery.name}"`, "success");
+      if (!res.ok) {
+        throw new Error("Failed to record purchase");
+      }
+
+      const updatedItem = await res.json();
+      const index = groceries.findIndex(g => g.name === grocery.name);
+      if (index !== -1) {
+        groceries[index] = updatedItem;
+      }
+      
+      if (typeof showToast !== 'undefined') {
+        showToast(`Marked "${grocery.name}" as purchased`, "success");
+      }
+    } else {
+
+      const purchaseIndex = grocery.purchases.findIndex(date => {
+        const purchaseDate = new Date(date).toISOString().split('T')[0];
+        return purchaseDate === todayDate;
+      });
+      
+      if (purchaseIndex !== -1) {
+        grocery.purchases.splice(purchaseIndex, 1);
+        
+        const res = await fetch(`http://localhost:3000/api/groceries/${encodeURIComponent(grocery.name)}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ purchases: grocery.purchases }),
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to update grocery");
+        }
+
+        const updatedItem = await res.json();
+        const index = groceries.findIndex(g => g.name === grocery.name);
+        if (index !== -1) {
+          groceries[index] = updatedItem;
+        }
+        
+        if (typeof showToast !== 'undefined') {
+          showToast(`Unmarked "${grocery.name}"`, "info");
+        }
+      }
     }
   } catch (error) {
-    console.error("Error recording purchase:", error);
+    console.error("Error toggling purchase:", error);
     if (typeof showToast !== 'undefined') {
-      showToast("Failed to record purchase. Retrying...", "error");
+      showToast("Failed to update item", "error");
     }
     // Fallback: update locally and save
-    grocery.purchases.push(new Date().toISOString());
+    if (isChecked) {
+      grocery.purchases.push(today);
+    } else {
+      const purchaseIndex = grocery.purchases.findIndex(date => {
+        const purchaseDate = new Date(date).toISOString().split('T')[0];
+        return purchaseDate === todayDate;
+      });
+      if (purchaseIndex !== -1) {
+        grocery.purchases.splice(purchaseIndex, 1);
+      }
+    }
     await saveGroceries(groceries);
   }
 }
@@ -133,7 +175,7 @@ async function toggleHistory(grocery) {
   grocery.expanded = !grocery.expanded;
   
   try {
-    const res = await fetch(`/api/groceries/${encodeURIComponent(grocery.name)}`, {
+    const res = await fetch(`http://localhost:3000/api/groceries/${encodeURIComponent(grocery.name)}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -146,14 +188,12 @@ async function toggleHistory(grocery) {
     }
 
     const updatedItem = await res.json();
-    // Update local grocery item
     const index = groceries.findIndex(g => g.name === grocery.name);
     if (index !== -1) {
       groceries[index] = updatedItem;
     }
   } catch (error) {
     console.error("Error toggling history:", error);
-    // Fallback: save all groceries
     await saveGroceries(groceries);
   }
 }
@@ -165,9 +205,8 @@ async function resetGroceries() {
   if (resetBtn && typeof setLoading !== 'undefined') {
     setLoading(resetBtn, true);
   }
-  
   try {
-    const res = await fetch("/api/groceries", {
+    const res = await fetch("http://localhost:3000/api/groceries", {
       method: "DELETE",
     });
 
@@ -193,17 +232,12 @@ async function resetGroceries() {
   }
 }
 
-async function renameGrocery(grocery, newName) {
-  grocery.name = newName;
-  await saveGroceries(groceries);
-}
-
 async function deleteGrocery(index) {
   const grocery = groceries[index];
   if (!grocery) return;
 
   try {
-    const res = await fetch(`/api/groceries/${encodeURIComponent(grocery.name)}`, {
+    const res = await fetch(`http://localhost:3000/api/groceries/${encodeURIComponent(grocery.name)}`, {
       method: "DELETE",
     });
 
@@ -215,7 +249,6 @@ async function deleteGrocery(index) {
     if (Array.isArray(updatedGroceries)) {
       groceries = updatedGroceries;
     } else {
-      // Fallback: remove from local array
       groceries.splice(index, 1);
     }
 
@@ -227,16 +260,9 @@ async function deleteGrocery(index) {
     if (typeof showToast !== 'undefined') {
       showToast("Failed to delete grocery", "error");
     }
-    // Fallback: remove from local array
     groceries.splice(index, 1);
     await saveGroceries(groceries);
   }
-}
-
-async function clearGroceryHistory(grocery) {
-  grocery.purchases = [];
-  grocery.expanded = false;
-  await saveGroceries(groceries);
 }
 
 window.resetGroceries = resetGroceries;
