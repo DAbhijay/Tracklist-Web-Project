@@ -1,6 +1,9 @@
 let groceries = [];
 let groceriesReady = false;
 
+// Make groceries accessible globally for debugging and cross-file access
+window.groceries = groceries;
+
 // Initialize groceries from API
 (async function initGroceries() {
   try {
@@ -45,11 +48,16 @@ let groceriesReady = false;
       groceries = [];
     }
     
+    // Update global reference
+    window.groceries = groceries;
+    
     groceriesReady = true;
     if (window.onGroceriesReady) window.onGroceriesReady();
     
     // Dispatch custom event
     window.dispatchEvent(new CustomEvent('groceriesReady', { detail: groceries }));
+    
+    console.log('Groceries loaded:', groceries.length, 'items');
     
     // Render if we're on the groceries page - check multiple ways
     const isOnGroceriesPage = (typeof getCurrentPage === 'function' && getCurrentPage() === 'groceries') ||
@@ -65,6 +73,10 @@ let groceriesReady = false;
   } catch (error) {
     console.warn("Error loading groceries (using empty list):", error.message);
     groceries = [];
+    
+    // Update global reference
+    window.groceries = groceries;
+    
     groceriesReady = true;
     if (window.onGroceriesReady) window.onGroceriesReady();
     
@@ -107,6 +119,9 @@ async function addGrocery(name) {
       groceries.push(newItem);
     }
     
+    // Update global reference
+    window.groceries = groceries;
+    
     // Re-render the UI immediately
     if (typeof renderGroceries === 'function') {
       renderGroceries();
@@ -147,6 +162,7 @@ async function togglePurchase(grocery, isChecked) {
       const index = groceries.findIndex(g => g.name === grocery.name);
       if (index !== -1) {
         groceries[index] = updatedItem;
+        window.groceries = groceries;
       }
       
       // Re-render the UI immediately
@@ -183,6 +199,7 @@ async function togglePurchase(grocery, isChecked) {
         const index = groceries.findIndex(g => g.name === grocery.name);
         if (index !== -1) {
           groceries[index] = updatedItem;
+          window.groceries = groceries;
         }
         
         // Re-render the UI immediately
@@ -241,6 +258,7 @@ async function toggleHistory(grocery) {
     const index = groceries.findIndex(g => g.name === grocery.name);
     if (index !== -1) {
       groceries[index] = updatedItem;
+      window.groceries = groceries;
     }
     
     // Re-render the UI immediately
@@ -275,6 +293,7 @@ async function resetGroceries() {
     }
 
     groceries = [];
+    window.groceries = groceries;
     
     // Re-render the UI immediately
     if (typeof renderGroceries === 'function') {
@@ -290,6 +309,7 @@ async function resetGroceries() {
       showToast("Failed to reset groceries", "error");
     }
     groceries = [];
+    window.groceries = groceries;
     await saveGroceries(groceries);
     
     // Re-render even on error
@@ -322,6 +342,8 @@ async function deleteGrocery(index) {
     } else {
       groceries.splice(index, 1);
     }
+    
+    window.groceries = groceries;
 
     // Re-render the UI immediately
     if (typeof renderGroceries === 'function') {
@@ -337,6 +359,7 @@ async function deleteGrocery(index) {
       showToast("Failed to delete grocery", "error");
     }
     groceries.splice(index, 1);
+    window.groceries = groceries;
     await saveGroceries(groceries);
     
     // Re-render even on error

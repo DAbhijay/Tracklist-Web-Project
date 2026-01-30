@@ -217,22 +217,34 @@ window.getCurrentPage = () => currentPage;
 window.renderPageContent = renderPageContent;
 
 // Listen for when data becomes ready and render if needed
-window.addEventListener('groceriesReady', () => {
-  if (currentPage === 'groceries' || window.location.hash === '#groceries') {
+window.addEventListener('groceriesReady', (event) => {
+  console.log('groceriesReady event fired, currentPage:', currentPage, 'hash:', window.location.hash);
+  const isOnGroceriesPage = currentPage === 'groceries' || 
+                            window.location.hash === '#groceries' ||
+                            document.querySelector('#groceries-page.active');
+  
+  if (isOnGroceriesPage) {
+    console.log('On groceries page, rendering...');
     setTimeout(() => {
       if (typeof renderGroceries === 'function') {
         renderGroceries();
       }
-    }, 100);
+    }, 150);
   }
 });
 
-window.addEventListener('tasksReady', () => {
-  if (currentPage === 'tasks' || window.location.hash === '#tasks') {
+window.addEventListener('tasksReady', (event) => {
+  console.log('tasksReady event fired, currentPage:', currentPage, 'hash:', window.location.hash);
+  const isOnTasksPage = currentPage === 'tasks' || 
+                        window.location.hash === '#tasks' ||
+                        document.querySelector('#tasks-page.active');
+  
+  if (isOnTasksPage) {
+    console.log('On tasks page, rendering...');
     setTimeout(() => {
       if (typeof renderTasks === 'function') {
         renderTasks();
       }
-    }, 100);
+    }, 150);
   }
 });

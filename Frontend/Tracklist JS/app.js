@@ -54,18 +54,48 @@ function initResetButton() {
 }
 
 function renderGroceries() {
-  if (!groceryList) return;
+  if (!groceryList) {
+    console.warn('renderGroceries: groceryList not found');
+    return;
+  }
+  
+  // Ensure we have access to the groceries array from groceries.js
+  // If groceries is not accessible, try to get it from window or reload
+  let groceriesToRender = typeof groceries !== 'undefined' ? groceries : (window.groceries || []);
+  
+  // If groceries is empty but we're on the groceries page, try reloading from window
+  if (!groceriesToRender || !groceriesToRender.length) {
+    // Check if data should be ready
+    if (typeof groceriesReady !== 'undefined' && groceriesReady) {
+      console.warn('renderGroceries: groceries array is empty but groceriesReady is true, checking window.groceries');
+      // Try to reload from the global scope
+      if (window.groceries && Array.isArray(window.groceries) && window.groceries.length > 0) {
+        console.log('renderGroceries: Found groceries in window.groceries, using that');
+        groceriesToRender = window.groceries;
+        // Also update the local variable if it exists
+        if (typeof groceries !== 'undefined') {
+          groceries = window.groceries;
+        }
+      } else {
+        console.warn('renderGroceries: window.groceries is also empty, data may not have loaded yet');
+      }
+    } else {
+      console.log('renderGroceries: groceriesReady is false, data still loading');
+    }
+  }
+  
+  console.log('renderGroceries: rendering', groceriesToRender?.length || 0, 'items');
   
   groceryList.innerHTML = "";
 
-  if (!groceries || !groceries.length) {
+  if (!groceriesToRender || !groceriesToRender.length) {
     groceryList.innerHTML = `<li class="empty-state">Your grocery list is empty</li>`;
     return;
   }
 
   const today = new Date().toISOString().split('T')[0];
 
-  groceries.forEach((item, index) => {
+  groceriesToRender.forEach((item, index) => {
     const li = document.createElement("li");
     li.classList.toggle("expanded", item.expanded);
     
@@ -187,18 +217,48 @@ function renderGroceries() {
 /* ----------------- TASKS ----------------- */
 
 function renderTasks() {
-  if (!taskList) return;
+  if (!taskList) {
+    console.warn('renderTasks: taskList not found');
+    return;
+  }
+  
+  // Ensure we have access to the tasks array from tasks.js
+  // If tasks is not accessible, try to get it from window or reload
+  let tasksToRender = typeof tasks !== 'undefined' ? tasks : (window.tasks || []);
+  
+  // If tasks is empty but we're on the tasks page, try reloading from window
+  if (!tasksToRender || !tasksToRender.length) {
+    // Check if data should be ready
+    if (typeof tasksReady !== 'undefined' && tasksReady) {
+      console.warn('renderTasks: tasks array is empty but tasksReady is true, checking window.tasks');
+      // Try to reload from the global scope
+      if (window.tasks && Array.isArray(window.tasks) && window.tasks.length > 0) {
+        console.log('renderTasks: Found tasks in window.tasks, using that');
+        tasksToRender = window.tasks;
+        // Also update the local variable if it exists
+        if (typeof tasks !== 'undefined') {
+          tasks = window.tasks;
+        }
+      } else {
+        console.warn('renderTasks: window.tasks is also empty, data may not have loaded yet');
+      }
+    } else {
+      console.log('renderTasks: tasksReady is false, data still loading');
+    }
+  }
+  
+  console.log('renderTasks: rendering', tasksToRender?.length || 0, 'items');
   
   taskList.innerHTML = "";
 
-  if (!tasks || !tasks.length) {
+  if (!tasksToRender || !tasksToRender.length) {
     taskList.innerHTML = `<li class="empty-state">You're all caught up 🎉</li>`;
     return;
   }
 
   const today = new Date().toISOString().split("T")[0];
 
-  const sorted = [...tasks].sort((a, b) => {
+  const sorted = [...tasksToRender].sort((a, b) => {
     if (a.completed !== b.completed) return a.completed ? 1 : -1;
     if (!a.dueDate) return 1;
     if (!b.dueDate) return -1;
@@ -242,9 +302,13 @@ function renderTasks() {
     del.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const index = tasks.indexOf(task);
-      await deleteTask(index);
-      renderTasks();
+      // Use tasksToRender or fallback to window.tasks or tasks
+      const tasksArray = tasksToRender || window.tasks || tasks || [];
+      const index = tasksArray.findIndex(t => t.id === task.id || (t.name === task.name && t.dueDate === task.dueDate));
+      if (index !== -1) {
+        await deleteTask(index);
+        renderTasks();
+      }
     });
 
     li.append(checkbox, span, meta, del);

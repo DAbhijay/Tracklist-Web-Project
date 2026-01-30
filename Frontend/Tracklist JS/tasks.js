@@ -1,6 +1,9 @@
 let tasks = [];
 let tasksReady = false;
 
+// Make tasks accessible globally for debugging and cross-file access
+window.tasks = tasks;
+
 // Initialize tasks from API
 (async function initTasks() {
   try {
@@ -34,11 +37,16 @@ let tasksReady = false;
       }
     }
     
+    // Update global reference
+    window.tasks = tasks;
+    
     tasksReady = true;
     if (window.onTasksReady) window.onTasksReady();
     
     // Dispatch custom event
     window.dispatchEvent(new CustomEvent('tasksReady', { detail: tasks }));
+    
+    console.log('Tasks loaded:', tasks.length, 'items');
     
     // Render if we're on the tasks page - check multiple ways
     const isOnTasksPage = (typeof getCurrentPage === 'function' && getCurrentPage() === 'tasks') ||
@@ -55,6 +63,10 @@ let tasksReady = false;
     console.warn("Error loading tasks (using empty list):", error.message);
     // Silently fail - use empty array
     tasks = [];
+    
+    // Update global reference
+    window.tasks = tasks;
+    
     tasksReady = true;
     if (window.onTasksReady) window.onTasksReady();
     
@@ -98,6 +110,9 @@ async function addTask(name, dueDate) {
       tasks.push(newTask);
     }
     
+    // Update global reference
+    window.tasks = tasks;
+    
     if (typeof showToast !== 'undefined') {
       showToast(`Added task: "${name}"`, "success");
     }
@@ -130,6 +145,7 @@ async function toggleTask(task) {
      
     if (Array.isArray(updatedTasks)) {
       tasks = updatedTasks;
+      window.tasks = tasks;
     }
     
     if (typeof showToast !== 'undefined') {
@@ -153,6 +169,7 @@ async function deleteTask(index) {
   if (!task || !task.id) {
     // If no ID, fall back to bulk save
     tasks.splice(index, 1);
+    window.tasks = tasks;
     await saveTasks(tasks);
     return;
   }
@@ -170,6 +187,7 @@ async function deleteTask(index) {
     const updatedTasks = await res.json();
     if (Array.isArray(updatedTasks)) {
       tasks = updatedTasks;
+      window.tasks = tasks;
     }
     
     if (typeof showToast !== 'undefined') {
@@ -182,6 +200,7 @@ async function deleteTask(index) {
     }
     // Fallback: remove locally
     tasks.splice(index, 1);
+    window.tasks = tasks;
     await saveTasks(tasks);
   }
 }
