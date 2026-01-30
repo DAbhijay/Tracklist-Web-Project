@@ -2,15 +2,28 @@
 
 let currentPage = 'home';
 
-function showPage(pageId) {
+function showPage(pageId, forceRender = false) {
   // LOG: See what's calling showPage
-  console.log('🔵 showPage called:', pageId, 'from:', currentPage);
-  console.trace('Stack trace:');
+  console.log('🔵 showPage called:', pageId, 'from:', currentPage, 'forceRender:', forceRender);
   
-  // Don't do anything if already on this page
-  if (currentPage === pageId) {
+  // Don't do anything if already on this page (unless forcing render)
+  if (currentPage === pageId && !forceRender) {
     console.log('⚠️ Already on this page, skipping');
+    // But still render if data is ready and we're forcing
+    if (forceRender) {
+      renderPageContent(pageId);
+    }
     return;
+  }
+  
+  // Update URL hash to preserve page state
+  if (pageId !== 'home') {
+    window.location.hash = pageId;
+  } else {
+    // Remove hash for home page
+    if (window.location.hash) {
+      history.replaceState(null, '', window.location.pathname);
+    }
   }
   
   // Hide all pages
@@ -32,6 +45,10 @@ function showPage(pageId) {
   });
   
   // Re-render content for the active page
+  renderPageContent(pageId);
+}
+
+function renderPageContent(pageId) {
   // Use a small delay to ensure DOM is ready, but also check if data is ready
   setTimeout(() => {
     if (pageId === 'groceries' && typeof renderGroceries === 'function') {
@@ -46,8 +63,14 @@ function showPage(pageId) {
             clearInterval(checkGroceries);
           }
         }, 50);
-        // Timeout after 2 seconds
-        setTimeout(() => clearInterval(checkGroceries), 2000);
+        // Timeout after 3 seconds
+        setTimeout(() => {
+          clearInterval(checkGroceries);
+          // Force render even if not ready (will show empty state)
+          if (typeof renderGroceries === 'function') {
+            renderGroceries();
+          }
+        }, 3000);
       }
     }
     if (pageId === 'tasks' && typeof renderTasks === 'function') {
@@ -62,8 +85,14 @@ function showPage(pageId) {
             clearInterval(checkTasks);
           }
         }, 50);
-        // Timeout after 2 seconds
-        setTimeout(() => clearInterval(checkTasks), 2000);
+        // Timeout after 3 seconds
+        setTimeout(() => {
+          clearInterval(checkTasks);
+          // Force render even if not ready (will show empty state)
+          if (typeof renderTasks === 'function') {
+            renderTasks();
+          }
+        }, 3000);
       }
     }
   }, 100);
@@ -135,16 +164,44 @@ function initNavigation() {
     });
   });
   
-  // Show home page by default
-  const active = document.querySelector('.page.active');
-  if (active) {
-    const id = active.id.replace('-page', '');
-    currentPage = id;
-    console.log('📍 Initial page from HTML:', currentPage);
+  // Check URL hash first to preserve page state on refresh
+  const hash = window.location.hash.replace('#', '');
+  let initialPage = 'home';
+  
+  if (hash && ['groceries', 'tasks', 'home'].includes(hash)) {
+    initialPage = hash;
+    console.log('📍 Initial page from URL hash:', initialPage);
   } else {
-    console.log('📍 No active page, showing home');
-    showPage('home');
+    // Fall back to HTML active class
+    const active = document.querySelector('.page.active');
+    if (active) {
+      const id = active.id.replace('-page', '');
+      initialPage = id;
+      console.log('📍 Initial page from HTML:', initialPage);
+    }
   }
+  
+  // Show the determined page
+  if (initialPage !== 'home') {
+    // Force show the page even if HTML says home
+    showPage(initialPage, true);
+  } else {
+    currentPage = 'home';
+    // Update nav buttons
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.page === 'home');
+    });
+  }
+  
+  // Listen for hash changes (back/forward buttons)
+  window.addEventListener('hashchange', () => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash && ['groceries', 'tasks', 'home'].includes(hash)) {
+      showPage(hash);
+    } else if (!hash) {
+      showPage('home');
+    }
+  });
 }
 
 // Initialize navigation when DOM is ready
@@ -157,3 +214,25 @@ if (document.readyState === 'loading') {
 // Export for use in other files
 window.showPage = showPage;
 window.getCurrentPage = () => currentPage;
+window.renderPageContent = renderPageContent;
+
+// Listen for when data becomes ready and render if needed
+window.addEventListener('groceriesReady', () => {
+  if (currentPage === 'groceries' || window.location.hash === '#groceries') {
+    setTimeout(() => {
+      if (typeof renderGroceries === 'function') {
+        renderGroceries();
+      }
+    }, 100);
+  }
+});
+
+window.addEventListener('tasksReady', () => {
+  if (currentPage === 'tasks' || window.location.hash === '#tasks') {
+    setTimeout(() => {
+      if (typeof renderTasks === 'function') {
+        renderTasks();
+      }
+    }, 100);
+  }
+});

@@ -48,11 +48,19 @@ let groceriesReady = false;
     groceriesReady = true;
     if (window.onGroceriesReady) window.onGroceriesReady();
     
-    // Render if we're on the groceries page
-    if (typeof getCurrentPage === 'function' && getCurrentPage() === 'groceries') {
-      if (typeof renderGroceries === 'function') {
+    // Dispatch custom event
+    window.dispatchEvent(new CustomEvent('groceriesReady', { detail: groceries }));
+    
+    // Render if we're on the groceries page - check multiple ways
+    const isOnGroceriesPage = (typeof getCurrentPage === 'function' && getCurrentPage() === 'groceries') ||
+                              window.location.hash === '#groceries' ||
+                              document.querySelector('#groceries-page.active');
+    
+    if (isOnGroceriesPage && typeof renderGroceries === 'function') {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
         renderGroceries();
-      }
+      }, 100);
     }
   } catch (error) {
     console.warn("Error loading groceries (using empty list):", error.message);
@@ -60,11 +68,19 @@ let groceriesReady = false;
     groceriesReady = true;
     if (window.onGroceriesReady) window.onGroceriesReady();
     
-    // Render if we're on the groceries page
-    if (typeof getCurrentPage === 'function' && getCurrentPage() === 'groceries') {
-      if (typeof renderGroceries === 'function') {
+    // Dispatch custom event
+    window.dispatchEvent(new CustomEvent('groceriesReady', { detail: groceries }));
+    
+    // Render if we're on the groceries page - check multiple ways
+    const isOnGroceriesPage = (typeof getCurrentPage === 'function' && getCurrentPage() === 'groceries') ||
+                              window.location.hash === '#groceries' ||
+                              document.querySelector('#groceries-page.active');
+    
+    if (isOnGroceriesPage && typeof renderGroceries === 'function') {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
         renderGroceries();
-      }
+      }, 100);
     }
   }
 })();

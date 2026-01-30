@@ -372,14 +372,21 @@ function checkInit() {
 }
 
 function renderCurrentPage() {
-  if (typeof getCurrentPage === 'function') {
-    const currentPage = getCurrentPage();
-    if (currentPage === 'groceries' && typeof renderGroceries === 'function') {
-      renderGroceries();
-    }
-    if (currentPage === 'tasks' && typeof renderTasks === 'function') {
-      renderTasks();
-    }
+  // Check URL hash first, then getCurrentPage function
+  const hash = window.location.hash.replace('#', '');
+  let pageToRender = null;
+  
+  if (hash && ['groceries', 'tasks'].includes(hash)) {
+    pageToRender = hash;
+  } else if (typeof getCurrentPage === 'function') {
+    pageToRender = getCurrentPage();
+  }
+  
+  if (pageToRender === 'groceries' && typeof renderGroceries === 'function') {
+    renderGroceries();
+  }
+  if (pageToRender === 'tasks' && typeof renderTasks === 'function') {
+    renderTasks();
   }
 }
 

@@ -37,11 +37,19 @@ let tasksReady = false;
     tasksReady = true;
     if (window.onTasksReady) window.onTasksReady();
     
-    // Render if we're on the tasks page
-    if (typeof getCurrentPage === 'function' && getCurrentPage() === 'tasks') {
-      if (typeof renderTasks === 'function') {
+    // Dispatch custom event
+    window.dispatchEvent(new CustomEvent('tasksReady', { detail: tasks }));
+    
+    // Render if we're on the tasks page - check multiple ways
+    const isOnTasksPage = (typeof getCurrentPage === 'function' && getCurrentPage() === 'tasks') ||
+                          window.location.hash === '#tasks' ||
+                          document.querySelector('#tasks-page.active');
+    
+    if (isOnTasksPage && typeof renderTasks === 'function') {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
         renderTasks();
-      }
+      }, 100);
     }
   } catch (error) {
     console.warn("Error loading tasks (using empty list):", error.message);
@@ -50,11 +58,19 @@ let tasksReady = false;
     tasksReady = true;
     if (window.onTasksReady) window.onTasksReady();
     
-    // Render if we're on the tasks page
-    if (typeof getCurrentPage === 'function' && getCurrentPage() === 'tasks') {
-      if (typeof renderTasks === 'function') {
+    // Dispatch custom event
+    window.dispatchEvent(new CustomEvent('tasksReady', { detail: tasks }));
+    
+    // Render if we're on the tasks page - check multiple ways
+    const isOnTasksPage = (typeof getCurrentPage === 'function' && getCurrentPage() === 'tasks') ||
+                          window.location.hash === '#tasks' ||
+                          document.querySelector('#tasks-page.active');
+    
+    if (isOnTasksPage && typeof renderTasks === 'function') {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
         renderTasks();
-      }
+      }, 100);
     }
   }
 })();
