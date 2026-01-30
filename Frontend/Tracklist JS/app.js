@@ -1,3 +1,5 @@
+// app.js - Main application logic and rendering
+
 // Prevent page reloads from errors
 window.addEventListener('error', (e) => {
   console.error('Global error caught:', e.error);
@@ -16,14 +18,13 @@ window.addEventListener('unhandledrejection', (e) => {
   }
 });
 
-// Wait for DOM to be ready
+// DOM element references
 let groceryInput, groceryList, groceryAddBtn;
 let taskInput, taskDate, taskList, taskAddBtn;
 let elementsInitialized = false;
 
 function initElements() {
   if (elementsInitialized) return;
-  elementsInitialized = true;
   
   groceryInput = document.getElementById("grocery-input");
   groceryList = document.getElementById("grocery-items");
@@ -33,9 +34,12 @@ function initElements() {
   taskDate = document.getElementById("task-date");
   taskList = document.getElementById("task-items");
   taskAddBtn = document.getElementById("add-task-btn");
+  
+  elementsInitialized = true;
+  console.log('✅ DOM elements initialized');
 }
 
-/* ----------------- GROCERIES ----------------- */
+/* ----------------- GROCERIES RENDERING ----------------- */
 
 let resetButtonInitialized = false;
 function initResetButton() {
@@ -47,57 +51,29 @@ function initResetButton() {
     resetBtn.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      await resetGroceries();
-      renderGroceries();
+      if (typeof resetGroceries === 'function') {
+        await resetGroceries();
+        renderGroceries();
+      }
     });
+    console.log('✅ Reset button initialized');
   }
 }
 
 function renderGroceries() {
   if (!groceryList) {
-    console.warn('⚠️ renderGroceries: groceryList not found');
+    console.warn('⚠️ renderGroceries: groceryList element not found');
     return;
   }
   
-  // Ensure we have access to the groceries array from groceries.js
-  // If groceries is not accessible, try to get it from window or reload
-  let groceriesToRender = typeof groceries !== 'undefined' ? groceries : (window.groceries || []);
+  // Get groceries from window object (most reliable source)
+  const groceriesToRender = window.groceries || [];
   
-  console.log('🔍 renderGroceries: Checking data sources...');
-  console.log('  - typeof groceries:', typeof groceries);
-  console.log('  - groceries value:', groceries);
-  console.log('  - window.groceries:', window.groceries);
-  console.log('  - groceriesReady:', typeof groceriesReady !== 'undefined' ? groceriesReady : 'undefined');
-  console.log('  - groceriesToRender length:', groceriesToRender?.length || 0);
-  
-  // If groceries is empty but we're on the groceries page, try reloading from window
-  if (!groceriesToRender || !groceriesToRender.length) {
-    // Check if data should be ready
-    if (typeof groceriesReady !== 'undefined' && groceriesReady) {
-      console.warn('⚠️ renderGroceries: groceries array is empty but groceriesReady is true, checking window.groceries');
-      // Try to reload from the global scope
-      if (window.groceries && Array.isArray(window.groceries) && window.groceries.length > 0) {
-        console.log('✅ renderGroceries: Found groceries in window.groceries, using that');
-        groceriesToRender = window.groceries;
-        // Also update the local variable if it exists
-        if (typeof groceries !== 'undefined') {
-          groceries = window.groceries;
-        }
-      } else {
-        console.error('❌ renderGroceries: window.groceries is also empty or not an array');
-        console.error('   window.groceries type:', typeof window.groceries);
-        console.error('   window.groceries value:', window.groceries);
-      }
-    } else {
-      console.log('⏳ renderGroceries: groceriesReady is false, data still loading');
-    }
-  }
-  
-  console.log('🎨 renderGroceries: About to render', groceriesToRender?.length || 0, 'items');
+  console.log('🎨 renderGroceries called, items:', groceriesToRender.length);
   
   groceryList.innerHTML = "";
 
-  if (!groceriesToRender || !groceriesToRender.length) {
+  if (!groceriesToRender.length) {
     groceryList.innerHTML = `<li class="empty-state">Your grocery list is empty</li>`;
     return;
   }
@@ -109,12 +85,11 @@ function renderGroceries() {
     li.classList.toggle("expanded", item.expanded);
     
     // Check if purchased today
-    const purchasedToday = item.purchases.some(date => {
+    const purchasedToday = item.purchases && item.purchases.some(date => {
       const purchaseDate = new Date(date).toISOString().split('T')[0];
       return purchaseDate === today;
     });
     
-    // Add purchased class for styling
     if (purchasedToday) {
       li.classList.add("purchased");
     }
@@ -134,19 +109,25 @@ function renderGroceries() {
     name.addEventListener("keydown", async (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
+        if (typeof toggleHistory === 'function') {
+          await toggleHistory(item);
+          renderGroceries();
+        }
+      }
+    });
+
+    name.addEventListener("click", async () => {
+      if (typeof toggleHistory === 'function') {
         await toggleHistory(item);
         renderGroceries();
       }
     });
 
-    name.addEventListener("click", async () => {
-      await toggleHistory(item);
-      renderGroceries();
-    });
-
     checkbox.addEventListener("change", async () => {
-      await togglePurchase(item, checkbox.checked);
-      renderGroceries();
+      if (typeof togglePurchase === 'function') {
+        await togglePurchase(item, checkbox.checked);
+        renderGroceries();
+      }
     });
 
     // Info section with purchase count
@@ -159,16 +140,19 @@ function renderGroceries() {
 
     const info = document.createElement("small");
     info.className = "grocery-info-text";
-    info.textContent = item.purchases.length
-      ? `Last bought: ${formatDateRelative(item.purchases.at(-1))}`
-      : "No purchase history yet";
-
-    if (item.purchases.length > 0) {
+    
+    if (item.purchases && item.purchases.length > 0) {
+      info.textContent = `Last bought: ${formatDateRelative(item.purchases.at(-1))}`;
+      
       const badge = document.createElement("span");
       badge.className = "purchase-count";
       badge.textContent = `${item.purchases.length} purchase${item.purchases.length > 1 ? 's' : ''}`;
       infoContainer.appendChild(badge);
+    } else {
+      info.textContent = "No purchase history yet";
     }
+    
+    infoContainer.insertBefore(info, infoContainer.firstChild);
 
     // Delete button with icon
     const deleteBtn = document.createElement("button");
@@ -180,11 +164,11 @@ function renderGroceries() {
     deleteBtn.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      // Use a more user-friendly confirmation
-      const confirmed = confirm(`Are you sure you want to delete "${item.name}" from your grocery list?\n\nThis will also remove all purchase history for this item.`);
-      if (confirmed) {
-        // Find the actual index in the current groceries array
-        const actualIndex = groceries.findIndex(g => g.name === item.name);
+      
+      const confirmed = confirm(`Are you sure you want to delete "${item.name}"?\n\nThis will also remove all purchase history for this item.`);
+      if (confirmed && typeof deleteGrocery === 'function') {
+        // Find actual index in current array
+        const actualIndex = window.groceries.findIndex(g => g.name === item.name);
         if (actualIndex !== -1) {
           await deleteGrocery(actualIndex);
           renderGroceries();
@@ -203,7 +187,7 @@ function renderGroceries() {
     actionsContainer.appendChild(deleteBtn);
     
     // Add purchase history if expanded
-    if (item.expanded && item.purchases.length) {
+    if (item.expanded && item.purchases && item.purchases.length) {
       const history = document.createElement("ul");
       history.className = "purchase-history";
 
@@ -218,58 +202,28 @@ function renderGroceries() {
     }
     
     li.append(checkbox, mainContent, actionsContainer);
-
     groceryList.appendChild(li);
   });
+  
+  console.log('✅ Rendered', groceriesToRender.length, 'grocery items');
 }
 
-/* ----------------- TASKS ----------------- */
+/* ----------------- TASKS RENDERING ----------------- */
 
 function renderTasks() {
   if (!taskList) {
-    console.warn('⚠️ renderTasks: taskList not found');
+    console.warn('⚠️ renderTasks: taskList element not found');
     return;
   }
   
-  // Ensure we have access to the tasks array from tasks.js
-  // If tasks is not accessible, try to get it from window or reload
-  let tasksToRender = typeof tasks !== 'undefined' ? tasks : (window.tasks || []);
+  // Get tasks from window object (most reliable source)
+  const tasksToRender = window.tasks || [];
   
-  console.log('🔍 renderTasks: Checking data sources...');
-  console.log('  - typeof tasks:', typeof tasks);
-  console.log('  - tasks value:', tasks);
-  console.log('  - window.tasks:', window.tasks);
-  console.log('  - tasksReady:', typeof tasksReady !== 'undefined' ? tasksReady : 'undefined');
-  console.log('  - tasksToRender length:', tasksToRender?.length || 0);
-  
-  // If tasks is empty but we're on the tasks page, try reloading from window
-  if (!tasksToRender || !tasksToRender.length) {
-    // Check if data should be ready
-    if (typeof tasksReady !== 'undefined' && tasksReady) {
-      console.warn('⚠️ renderTasks: tasks array is empty but tasksReady is true, checking window.tasks');
-      // Try to reload from the global scope
-      if (window.tasks && Array.isArray(window.tasks) && window.tasks.length > 0) {
-        console.log('✅ renderTasks: Found tasks in window.tasks, using that');
-        tasksToRender = window.tasks;
-        // Also update the local variable if it exists
-        if (typeof tasks !== 'undefined') {
-          tasks = window.tasks;
-        }
-      } else {
-        console.error('❌ renderTasks: window.tasks is also empty or not an array');
-        console.error('   window.tasks type:', typeof window.tasks);
-        console.error('   window.tasks value:', window.tasks);
-      }
-    } else {
-      console.log('⏳ renderTasks: tasksReady is false, data still loading');
-    }
-  }
-  
-  console.log('🎨 renderTasks: About to render', tasksToRender?.length || 0, 'items');
+  console.log('🎨 renderTasks called, items:', tasksToRender.length);
   
   taskList.innerHTML = "";
 
-  if (!tasksToRender || !tasksToRender.length) {
+  if (!tasksToRender.length) {
     taskList.innerHTML = `<li class="empty-state">You're all caught up 🎉</li>`;
     return;
   }
@@ -310,8 +264,10 @@ function renderTasks() {
 
     checkbox.addEventListener("change", async () => {
       task.completed = checkbox.checked;
-      await toggleTask(task);
-      renderTasks();
+      if (typeof toggleTask === 'function') {
+        await toggleTask(task);
+        renderTasks();
+      }
     });
 
     const del = document.createElement("button");
@@ -320,18 +276,22 @@ function renderTasks() {
     del.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      // Use tasksToRender or fallback to window.tasks or tasks
-      const tasksArray = tasksToRender || window.tasks || tasks || [];
-      const index = tasksArray.findIndex(t => t.id === task.id || (t.name === task.name && t.dueDate === task.dueDate));
-      if (index !== -1) {
-        await deleteTask(index);
-        renderTasks();
+      
+      if (typeof deleteTask === 'function') {
+        const tasksArray = window.tasks || [];
+        const index = tasksArray.findIndex(t => t.id === task.id || (t.name === task.name && t.dueDate === task.dueDate));
+        if (index !== -1) {
+          await deleteTask(index);
+          renderTasks();
+        }
       }
     });
 
     li.append(checkbox, span, meta, del);
     taskList.appendChild(li);
   });
+  
+  console.log('✅ Rendered', sorted.length, 'task items');
 }
 
 /* ----------------- EVENT HANDLERS ----------------- */
@@ -348,39 +308,35 @@ function initEventHandlers() {
 
       const name = value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
 
-      if (groceries.some(g => g.name === name)) {
-        if (typeof showToast !== 'undefined') {
-          showToast("Item already exists", "error");
-        } else {
-          alert("Item already exists.");
-        }
+      if (window.groceries && window.groceries.some(g => g.name === name)) {
+        showToast("Item already exists", "error");
         return;
       }
 
-      if (typeof setLoading !== 'undefined') {
-        setLoading(groceryAddBtn, true);
-      }
+      setLoading(groceryAddBtn, true);
 
       try {
-        await addGrocery(name);
-        groceryInput.value = "";
-        renderGroceries();
-      } catch (error) {
-        // Error already shown in addGrocery function
-      } finally {
-        if (typeof setLoading !== 'undefined') {
-          setLoading(groceryAddBtn, false);
+        if (typeof addGrocery === 'function') {
+          await addGrocery(name);
+          groceryInput.value = "";
+          renderGroceries();
         }
+      } catch (error) {
+        console.error("Error in add grocery handler:", error);
+      } finally {
+        setLoading(groceryAddBtn, false);
       }
     });
     
-    // Also allow Enter key in input
+    // Allow Enter key in input
     groceryInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
         groceryAddBtn.click();
       }
     });
+    
+    console.log('✅ Grocery event handlers initialized');
   }
 
   // Task add button
@@ -394,40 +350,42 @@ function initEventHandlers() {
 
       if (!name) return;
 
-      if (typeof setLoading !== 'undefined') {
-        setLoading(taskAddBtn, true);
-      }
+      setLoading(taskAddBtn, true);
 
       try {
-        await addTask(name, dueDate);
-        taskInput.value = "";
-        taskDate.value = "";
-        renderTasks();
-      } catch (error) {
-        // Error already shown in addTask
-      } finally {
-        if (typeof setLoading !== 'undefined') {
-          setLoading(taskAddBtn, false);
+        if (typeof addTask === 'function') {
+          await addTask(name, dueDate);
+          taskInput.value = "";
+          taskDate.value = "";
+          renderTasks();
         }
+      } catch (error) {
+        console.error("Error in add task handler:", error);
+      } finally {
+        setLoading(taskAddBtn, false);
       }
     });
     
-    // Also allow Enter key in task input
+    // Allow Enter key in task input
     taskInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
         taskAddBtn.click();
       }
     });
+    
+    console.log('✅ Task event handlers initialized');
   }
 }
 
 /* ----------------- INITIALIZATION ----------------- */
 
 function initializeApp() {
+  console.log('🚀 Initializing app...');
   initElements();
   initEventHandlers();
   initResetButton();
+  console.log('✅ App initialized');
 }
 
 if (document.readyState === 'loading') {
@@ -436,25 +394,25 @@ if (document.readyState === 'loading') {
   initializeApp();
 }
 
-/* ----------------- DATA LOADING ----------------- */
+/* ----------------- DATA LOADING COORDINATION ----------------- */
 
 let initCount = 0;
 let initComplete = false;
 
 function checkInit() {
   initCount++;
+  console.log(`📊 Init check ${initCount}/2`);
+  
   if (initCount === 2 && !initComplete) {
     initComplete = true;
-    if (typeof setLoadingOverlay !== 'undefined') {
-      setLoadingOverlay(false);
-    }
-    // Always render the current page after data loads
+    console.log('✅ Both data sources loaded');
+    
+    setLoadingOverlay(false);
     renderCurrentPage();
   }
 }
 
 function renderCurrentPage() {
-  // Check URL hash first, then getCurrentPage function
   const hash = window.location.hash.replace('#', '');
   let pageToRender = null;
   
@@ -464,116 +422,63 @@ function renderCurrentPage() {
     pageToRender = getCurrentPage();
   }
   
-  if (pageToRender === 'groceries' && typeof renderGroceries === 'function') {
+  console.log('📄 Rendering current page:', pageToRender);
+  
+  if (pageToRender === 'groceries') {
     renderGroceries();
-  }
-  if (pageToRender === 'tasks' && typeof renderTasks === 'function') {
+  } else if (pageToRender === 'tasks') {
     renderTasks();
   }
 }
 
+// Show loading overlay at start
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    if (typeof setLoadingOverlay !== 'undefined') {
-      setLoadingOverlay(true);
-    }
+    setLoadingOverlay(true);
   });
 } else {
-  if (typeof setLoadingOverlay !== 'undefined') {
-    setLoadingOverlay(true);
-  }
+  setLoadingOverlay(true);
 }
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
-  // Alt+G for Groceries, Alt+T for Tasks, Alt+H for Home
   if (e.altKey && !e.ctrlKey && !e.metaKey) {
-    if (e.key === 'g') {
+    if (e.key === 'g' && typeof showPage === 'function') {
       e.preventDefault();
       showPage('groceries');
-    } else if (e.key === 't') {
+    } else if (e.key === 't' && typeof showPage === 'function') {
       e.preventDefault();
       showPage('tasks');
-    } else if (e.key === 'h') {
+    } else if (e.key === 'h' && typeof showPage === 'function') {
       e.preventDefault();
       showPage('home');
     }
   }
 });
 
+// Register callbacks for when data is ready
 window.onGroceriesReady = checkInit;
 window.onTasksReady = checkInit;
 
-// Aggressive rendering check - periodically check if we need to render
-// This handles cases where data loads but rendering didn't happen
-(function checkAndRenderPeriodically() {
-  // Check every 500ms for the first 5 seconds after page load
-  let checkCount = 0;
-  const maxChecks = 10; // 10 checks = 5 seconds
-  
-  const interval = setInterval(() => {
-    checkCount++;
-    
-    // Check groceries
-    if (typeof groceriesReady !== 'undefined' && groceriesReady && 
-        typeof window.groceries !== 'undefined' && 
-        Array.isArray(window.groceries) && 
-        window.groceries.length > 0) {
-      
-      const shouldRenderGroceries = 
-        (typeof getCurrentPage === 'function' && getCurrentPage() === 'groceries') ||
-        window.location.hash === '#groceries' ||
-        document.querySelector('#groceries-page.active') ||
-        (typeof localStorage !== 'undefined' && localStorage.getItem('lastActivePage') === 'groceries');
-      
-      if (shouldRenderGroceries && typeof renderGroceries === 'function') {
-        const list = document.getElementById('grocery-items');
-        if (list && (!list.children.length || list.querySelector('.empty-state'))) {
-          console.log('Periodic check: Rendering groceries that were missed');
-          renderGroceries();
-        }
-      }
-    }
-    
-    // Check tasks
-    if (typeof tasksReady !== 'undefined' && tasksReady && 
-        typeof window.tasks !== 'undefined' && 
-        Array.isArray(window.tasks) && 
-        window.tasks.length > 0) {
-      
-      const shouldRenderTasks = 
-        (typeof getCurrentPage === 'function' && getCurrentPage() === 'tasks') ||
-        window.location.hash === '#tasks' ||
-        document.querySelector('#tasks-page.active') ||
-        (typeof localStorage !== 'undefined' && localStorage.getItem('lastActivePage') === 'tasks');
-      
-      if (shouldRenderTasks && typeof renderTasks === 'function') {
-        const list = document.getElementById('task-items');
-        if (list && (!list.children.length || list.querySelector('.empty-state'))) {
-          console.log('Periodic check: Rendering tasks that were missed');
-          renderTasks();
-        }
-      }
-    }
-    
-    if (checkCount >= maxChecks) {
-      clearInterval(interval);
-    }
-  }, 500);
-})();
-
+// Safety timeout to ensure loading overlay is removed
 setTimeout(() => {
   if (!initComplete) {
-    console.warn('Initialization timeout - hiding loading overlay and forcing completion');
+    console.warn('⚠️ Initialization timeout - forcing completion');
     initComplete = true;
-    if (window.onGroceriesReady) {
-      window.onGroceriesReady();
-    }
-    if (window.onTasksReady) {
-      window.onTasksReady();
-    }
-    if (typeof setLoadingOverlay !== 'undefined') {
-      setLoadingOverlay(false);
-    }
+    setLoadingOverlay(false);
+    renderCurrentPage();
   }
-}, 2000);
+}, 3000);
+
+// Listen for page changes to trigger re-render
+window.addEventListener('hashchange', () => {
+  console.log('🔄 Hash changed, re-rendering current page');
+  renderCurrentPage();
+});
+
+// Make render functions globally available for external calls
+window.renderGroceries = renderGroceries;
+window.renderTasks = renderTasks;
+window.renderCurrentPage = renderCurrentPage;
+
+console.log('✅ App.js loaded');

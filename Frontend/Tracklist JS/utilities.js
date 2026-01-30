@@ -1,196 +1,102 @@
-// Helper Functions for Date Formatting and Utilities
+// Utilities.js - Helper functions used across the app
 
-/**
- * Check if item was bought today
- */
-function boughtToday(purchases) {
-  if (!purchases || !purchases.length) return false;
+// Format date for relative display (e.g., "2 days ago")
+function formatDateRelative(dateStr) {
+  if (!dateStr) return "Never";
   
-  const today = new Date().toISOString().split('T')[0];
-  
-  return purchases.some(date => {
-    const purchaseDate = new Date(date).toISOString().split('T')[0];
-    return purchaseDate === today;
-  });
-}
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-/**
- * Format date in relative terms (e.g., "Today", "Yesterday", "2 days ago")
- */
-function formatDateRelative(isoString) {
-  if (!isoString) return "Unknown";
-  
-  const date = new Date(isoString);
-  const today = new Date();
-  
-  // Reset time to midnight for accurate day comparison
-  today.setHours(0, 0, 0, 0);
-  const compareDate = new Date(date);
-  compareDate.setHours(0, 0, 0, 0);
-  
-  const diffTime = today - compareDate;
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  
   if (diffDays === 0) return "Today";
   if (diffDays === 1) return "Yesterday";
   if (diffDays < 7) return `${diffDays} days ago`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) > 1 ? 's' : ''} ago`;
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) > 1 ? 's' : ''} ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+  return `${Math.floor(diffDays / 365)} years ago`;
+}
+
+// Format date for full display (e.g., "Jan 30, 2026")
+function formatDateFull(dateStr) {
+  if (!dateStr) return "Unknown date";
   
-  return `${Math.floor(diffDays / 365)} year${Math.floor(diffDays / 365) > 1 ? 's' : ''} ago`;
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
 }
 
-/**
- * Format date in full format (e.g., "Jan 15, 2024")
- */
-function formatDateFull(isoString) {
-  if (!isoString) return "Unknown";
+// Show toast notification (if toast system exists)
+function showToast(message, type = 'info', duration = 3000) {
+  console.log(`[${type.toUpperCase()}] ${message}`);
   
-  const date = new Date(isoString);
-  const options = { month: 'short', day: 'numeric', year: 'numeric' };
-  return date.toLocaleDateString('en-US', options);
+  // Check if there's a toast system available
+  if (typeof window.showToastNotification === 'function') {
+    window.showToastNotification(message, type, duration);
+  }
 }
 
-/**
- * Format date for display (e.g., "Monday, Jan 15")
- */
-function formatDateDisplay(isoString) {
-  if (!isoString) return "No date";
-  
-  const date = new Date(isoString);
-  const options = { weekday: 'long', month: 'short', day: 'numeric' };
-  return date.toLocaleDateString('en-US', options);
-}
-
-/**
- * Escape HTML to prevent XSS attacks
- */
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-/**
- * Set loading state on a button
- */
+// Set loading state on button
 function setLoading(button, isLoading) {
   if (!button) return;
   
   if (isLoading) {
     button.disabled = true;
+    button.dataset.originalText = button.textContent;
+    button.textContent = 'Loading...';
     button.classList.add('loading');
-    const originalText = button.textContent;
-    button.dataset.originalText = originalText;
-    button.innerHTML = '<span class="btn-spinner">⏳</span>';
   } else {
     button.disabled = false;
+    if (button.dataset.originalText) {
+      button.textContent = button.dataset.originalText;
+      delete button.dataset.originalText;
+    }
     button.classList.remove('loading');
-    button.innerHTML = button.dataset.originalText || button.textContent;
   }
 }
 
-/**
- * Show/hide loading overlay
- */
+// Set loading overlay
 function setLoadingOverlay(show) {
   const overlay = document.getElementById('loading-overlay');
-  if (!overlay) return;
-  
-  if (show) {
-    overlay.classList.remove('hidden');
-  } else {
-    setTimeout(() => {
-      overlay.classList.add('hidden');
-    }, 300);
+  if (overlay) {
+    overlay.style.display = show ? 'flex' : 'none';
   }
 }
 
-/**
- * Show toast notification
- */
-function showToast(message, type = 'info', duration = 3000) {
-  const container = document.getElementById('toast-container');
-  if (!container) {
-    console.warn('Toast container not found');
-    return;
-  }
-  
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  
-  const icons = {
-    success: '✓',
-    error: '✕',
-    info: 'ℹ',
-    warning: '⚠'
-  };
-  
-  toast.innerHTML = `
-    <span class="toast-icon">${icons[type] || icons.info}</span>
-    <span class="toast-message">${escapeHtml(message)}</span>
-    <button class="toast-close" onclick="this.parentElement.remove()">×</button>
-  `;
-  
-  container.appendChild(toast);
-  
-  // Auto-remove after duration
-  setTimeout(() => {
-    toast.style.animation = 'slideOut 0.3s ease';
-    setTimeout(() => toast.remove(), 300);
-  }, duration);
-}
-
-/**
- * Get current active page
- */
+// Get current page from DOM
 function getCurrentPage() {
+  // Check active page element
   const activePage = document.querySelector('.page.active');
-  return activePage ? activePage.id.replace('-page', '') : 'home';
-}
-
-/**
- * Show a specific page
- */
-function showPage(pageName) {
-  // Hide all pages
-  document.querySelectorAll('.page').forEach(page => {
-    page.classList.remove('active');
-  });
-  
-  // Show selected page
-  const page = document.getElementById(`${pageName}-page`);
-  if (page) {
-    page.classList.add('active');
+  if (activePage) {
+    return activePage.id.replace('-page', '');
   }
   
-  // Update nav buttons
-  document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.classList.remove('active');
-    if (btn.dataset.page === pageName) {
-      btn.classList.add('active');
-    }
-  });
-  
-  // Render appropriate content
-  if (pageName === 'groceries' && typeof renderGroceries === 'function') {
-    renderGroceries();
-  } else if (pageName === 'tasks' && typeof renderTasks === 'function') {
-    renderTasks();
+  // Check URL hash
+  const hash = window.location.hash.replace('#', '');
+  if (hash) {
+    return hash;
   }
+  
+  // Check localStorage
+  if (typeof localStorage !== 'undefined') {
+    const lastPage = localStorage.getItem('lastActivePage');
+    if (lastPage) {
+      return lastPage;
+    }
+  }
+  
+  return 'home'; // default
 }
 
-// Add slideOut animation for toast
-if (!document.querySelector('#toast-animation-style')) {
-  const style = document.createElement('style');
-  style.id = 'toast-animation-style';
-  style.textContent = `
-    @keyframes slideOut {
-      to {
-        transform: translateX(100%);
-        opacity: 0;
-      }
-    }
-  `;
-  document.head.appendChild(style);
-}
+// Make functions globally available
+window.formatDateRelative = formatDateRelative;
+window.formatDateFull = formatDateFull;
+window.showToast = showToast;
+window.setLoading = setLoading;
+window.setLoadingOverlay = setLoadingOverlay;
+window.getCurrentPage = getCurrentPage;
+
+console.log('✅ Utility functions registered globally');

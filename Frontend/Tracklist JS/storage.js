@@ -1,31 +1,13 @@
+// Storage.js - API communication layer
+// This file must be loaded BEFORE groceries.js and tasks.js
+
 const API_BASE = window.location.hostname === 'localhost'
-  ? "https://localhost:3000/api"
+  ? "http://localhost:3000/api"
   : "/api";
 
-function safeJSONParse(key) {
-  try {
-    return JSON.parse(localStorage.getItem(key)) || [];
-  } catch {
-    localStorage.removeItem(key);
-    return [];
-  }
-}
+console.log('📡 Storage layer initialized, API base:', API_BASE);
 
-async function saveGroceries(groceries) {
-  const res = await fetch(`${API_BASE}/groceries`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ groceries }),
-  });
-  
-  if (!res.ok) {
-    throw new Error(`Failed to save groceries: ${res.statusText}`);
-  }
-  
-  return await res.json();
-}
+// ----- GROCERY API FUNCTIONS -----
 
 async function loadGroceries() {
   try {
@@ -40,7 +22,6 @@ async function loadGroceries() {
     console.log('📡 Groceries API response status:', res.status, res.statusText);
     
     if (!res.ok) {
-      // If backend returns error, return empty array instead of throwing
       console.error(`❌ Backend returned ${res.status}, using empty grocery list`);
       const errorText = await res.text();
       console.error('Error response:', errorText);
@@ -58,28 +39,34 @@ async function loadGroceries() {
     
     return data;
   } catch (error) {
-    // Network error or backend not running - return empty array
     console.error("❌ Could not connect to backend, using empty grocery list:", error.message);
     console.error('Full error:', error);
     return [];
   }
 }
 
-async function saveTasks(tasks) {
-  const res = await fetch(`${API_BASE}/tasks`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ tasks }),
-  });
-  
-  if (!res.ok) {
-    throw new Error(`Failed to save tasks: ${res.statusText}`);
+async function saveGroceries(groceries) {
+  try {
+    const res = await fetch(`${API_BASE}/groceries`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(groceries),
+    });
+    
+    if (!res.ok) {
+      throw new Error(`Failed to save groceries: ${res.statusText}`);
+    }
+    
+    return await res.json();
+  } catch (error) {
+    console.error("Error saving groceries:", error);
+    throw error;
   }
-  
-  return await res.json();
 }
+
+// ----- TASK API FUNCTIONS -----
 
 async function loadTasks() {
   try {
@@ -94,7 +81,6 @@ async function loadTasks() {
     console.log('📡 Tasks API response status:', res.status, res.statusText);
     
     if (!res.ok) {
-      // If backend returns error, return empty array instead of throwing
       console.error(`❌ Backend returned ${res.status}, using empty task list`);
       const errorText = await res.text();
       console.error('Error response:', errorText);
@@ -112,9 +98,37 @@ async function loadTasks() {
     
     return data;
   } catch (error) {
-    // Network error or backend not running - return empty array
     console.error("❌ Could not connect to backend, using empty task list:", error.message);
     console.error('Full error:', error);
     return [];
   }
 }
+
+async function saveTasks(tasks) {
+  try {
+    const res = await fetch(`${API_BASE}/tasks`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(tasks),
+    });
+    
+    if (!res.ok) {
+      throw new Error(`Failed to save tasks: ${res.statusText}`);
+    }
+    
+    return await res.json();
+  } catch (error) {
+    console.error("Error saving tasks:", error);
+    throw error;
+  }
+}
+
+// Make functions globally available
+window.loadGroceries = loadGroceries;
+window.saveGroceries = saveGroceries;
+window.loadTasks = loadTasks;
+window.saveTasks = saveTasks;
+
+console.log('✅ Storage API functions registered globally');
