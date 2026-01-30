@@ -32,12 +32,39 @@ function showPage(pageId) {
   });
   
   // Re-render content for the active page
+  // Use a small delay to ensure DOM is ready, but also check if data is ready
   setTimeout(() => {
     if (pageId === 'groceries' && typeof renderGroceries === 'function') {
-      renderGroceries();
+      // Check if groceries data is ready, if not wait a bit more
+      if (typeof groceriesReady !== 'undefined' && groceriesReady) {
+        renderGroceries();
+      } else {
+        // Wait for data to be ready
+        const checkGroceries = setInterval(() => {
+          if (typeof groceriesReady !== 'undefined' && groceriesReady) {
+            renderGroceries();
+            clearInterval(checkGroceries);
+          }
+        }, 50);
+        // Timeout after 2 seconds
+        setTimeout(() => clearInterval(checkGroceries), 2000);
+      }
     }
     if (pageId === 'tasks' && typeof renderTasks === 'function') {
-      renderTasks();
+      // Check if tasks data is ready, if not wait a bit more
+      if (typeof tasksReady !== 'undefined' && tasksReady) {
+        renderTasks();
+      } else {
+        // Wait for data to be ready
+        const checkTasks = setInterval(() => {
+          if (typeof tasksReady !== 'undefined' && tasksReady) {
+            renderTasks();
+            clearInterval(checkTasks);
+          }
+        }, 50);
+        // Timeout after 2 seconds
+        setTimeout(() => clearInterval(checkTasks), 2000);
+      }
     }
   }, 100);
 }

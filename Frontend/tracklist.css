@@ -448,10 +448,19 @@ body {
 ==================== */
 
 #grocery-items li {
-  display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  display: flex;
+  align-items: flex-start;
   gap: 1rem;
-  align-items: center;
+  padding: 1.25rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+#grocery-items li:hover {
+  background: var(--bg-primary);
+  border-left: 3px solid var(--primary-green);
+  padding-left: calc(1rem - 3px);
 }
 
 /* Grocery item base */
@@ -469,31 +478,44 @@ body {
 
 /* Checkbox */
 .grocery-checkbox {
-  width: 20px;
-  height: 20px;
-  margin-right: 12px;
+  width: 22px;
+  height: 22px;
   cursor: pointer;
   accent-color: var(--primary-green);
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 /* Grocery name */
 .grocery-name {
-  flex: 1;
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
   transition: all 0.2s;
   cursor: pointer;
+  display: block;
 }
 
 .grocery-name:hover {
   color: var(--primary-green);
+  text-decoration: underline;
+}
+
+.grocery-name:focus {
+  outline: 2px solid var(--primary-green);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 /* Line-through style for purchased items */
-.grocery-item.purchased .grocery-name {
+#grocery-items li.purchased .grocery-name {
   text-decoration: line-through;
-  color: #9ca3af;
+  color: var(--text-muted);
   opacity: 0.7;
+}
+
+#grocery-items li.purchased {
+  background: rgba(16, 185, 129, 0.05);
 }
 
 #grocery-items input[type="checkbox"]:disabled {
@@ -508,12 +530,13 @@ body {
 
 /* Purchase count badge */
 .purchase-count {
-  font-size: 12px;
-  color: #6b7280;
-  margin-left: 8px;
-  padding: 2px 8px;
-  background-color: #f3f4f6;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--primary-green);
+  padding: 0.25rem 0.625rem;
+  background-color: rgba(16, 185, 129, 0.1);
   border-radius: 12px;
+  white-space: nowrap;
 }
 
 /* History toggle button */
@@ -533,41 +556,91 @@ body {
   background-color: #bfdbfe;
 }
 
+/* Grocery main content container */
+.grocery-main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0; /* Allow text truncation */
+}
+
+/* Grocery info container */
+.grocery-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.grocery-info-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+/* Grocery actions container */
+.grocery-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 /* Delete button for groceries */
 .delete-grocery-btn,
 .delete-btn {
-  padding: 4px 8px;
-  background-color: #fee2e2;
-  color: #dc2626;
-  border: none;
-  border-radius: 4px;
+  padding: 0.5rem;
+  background-color: transparent;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 14px;
-  margin-left: 8px;
-  transition: background-color 0.2s;
+  font-size: 1.125rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
 }
 
 .delete-grocery-btn:hover,
 .delete-btn:hover {
-  background-color: #fecaca;
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--error);
+  border-color: rgba(239, 68, 68, 0.2);
+  transform: scale(1.1);
+}
+
+.delete-grocery-btn:active,
+.delete-btn:active {
+  transform: scale(0.95);
+}
+
+.delete-icon {
+  display: inline-block;
+  font-size: 1rem;
 }
 
 /* Purchase history */
 .purchase-history {
-  grid-column: 1 / -1;
-  padding-left: 32px;
-  margin-top: 8px;
-  font-size: 14px;
-  color: #6b7280;
+  width: 100%;
+  padding-left: 1.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
   max-height: 0;
   opacity: 0;
   overflow: hidden;
-  transition: max-height 0.3s ease, opacity 0.3s ease;
+  transition: max-height 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
+  list-style: none;
 }
 
-li.expanded .purchase-history {
+#grocery-items li.expanded .purchase-history {
   max-height: 300px;
   opacity: 1;
+  margin-top: 0.75rem;
 }
 
 .purchase-history li,
@@ -883,13 +956,17 @@ button.loading .btn-spinner {
   }
 
   #grocery-items li {
-    grid-template-columns: auto 1fr;
+    flex-direction: column;
+    align-items: stretch;
     gap: 0.75rem;
   }
 
-  #grocery-items small {
-    grid-column: 2;
-    text-align: left;
+  .grocery-main-content {
+    width: 100%;
+  }
+
+  .grocery-actions {
+    align-self: flex-end;
   }
 
   .purchase-history {

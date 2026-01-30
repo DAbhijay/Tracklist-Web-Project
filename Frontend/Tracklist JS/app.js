@@ -105,13 +105,21 @@ function renderGroceries() {
       renderGroceries();
     });
 
+    checkbox.addEventListener("change", async () => {
+      await togglePurchase(item, checkbox.checked);
+      renderGroceries();
+    });
+
     // Info section with purchase count
     const infoContainer = document.createElement("div");
+    infoContainer.className = "grocery-info";
     infoContainer.style.display = "flex";
     infoContainer.style.alignItems = "center";
     infoContainer.style.gap = "8px";
+    infoContainer.style.flexWrap = "wrap";
 
     const info = document.createElement("small");
+    info.className = "grocery-info-text";
     info.textContent = item.purchases.length
       ? `Last bought: ${formatDateRelative(item.purchases.at(-1))}`
       : "No purchase history yet";
@@ -123,27 +131,39 @@ function renderGroceries() {
       infoContainer.appendChild(badge);
     }
 
-    checkbox.addEventListener("change", async () => {
-      await togglePurchase(item, checkbox.checked);
-      renderGroceries();
-    });
-
-    // Delete button
+    // Delete button with icon
     const deleteBtn = document.createElement("button");
     deleteBtn.type = "button";
     deleteBtn.className = "delete-grocery-btn";
-    deleteBtn.textContent = "Delete";
+    deleteBtn.innerHTML = '<span class="delete-icon">🗑️</span>';
+    deleteBtn.setAttribute("aria-label", `Delete ${item.name}`);
+    deleteBtn.title = `Delete ${item.name}`;
     deleteBtn.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (confirm(`Delete "${item.name}" from your grocery list?`)) {
-        await deleteGrocery(index);
-        renderGroceries();
+      // Use a more user-friendly confirmation
+      const confirmed = confirm(`Are you sure you want to delete "${item.name}" from your grocery list?\n\nThis will also remove all purchase history for this item.`);
+      if (confirmed) {
+        // Find the actual index in the current groceries array
+        const actualIndex = groceries.findIndex(g => g.name === item.name);
+        if (actualIndex !== -1) {
+          await deleteGrocery(actualIndex);
+          renderGroceries();
+        }
       }
     });
 
-    li.append(checkbox, name, info, infoContainer, deleteBtn);
-
+    // Create a container for the main content
+    const mainContent = document.createElement("div");
+    mainContent.className = "grocery-main-content";
+    mainContent.append(name, infoContainer);
+    
+    // Create action buttons container
+    const actionsContainer = document.createElement("div");
+    actionsContainer.className = "grocery-actions";
+    actionsContainer.appendChild(deleteBtn);
+    
+    // Add purchase history if expanded
     if (item.expanded && item.purchases.length) {
       const history = document.createElement("ul");
       history.className = "purchase-history";
@@ -155,8 +175,10 @@ function renderGroceries() {
         history.appendChild(h);
       });
 
-      li.appendChild(history);
+      mainContent.appendChild(history);
     }
+    
+    li.append(checkbox, mainContent, actionsContainer);
 
     groceryList.appendChild(li);
   });
@@ -344,10 +366,18 @@ function checkInit() {
     if (typeof setLoadingOverlay !== 'undefined') {
       setLoadingOverlay(false);
     }
-    if (typeof getCurrentPage === 'function' && getCurrentPage() === 'groceries') {
+    // Always render the current page after data loads
+    renderCurrentPage();
+  }
+}
+
+function renderCurrentPage() {
+  if (typeof getCurrentPage === 'function') {
+    const currentPage = getCurrentPage();
+    if (currentPage === 'groceries' && typeof renderGroceries === 'function') {
       renderGroceries();
     }
-    if (typeof getCurrentPage === 'function' && getCurrentPage() === 'tasks') {
+    if (currentPage === 'tasks' && typeof renderTasks === 'function') {
       renderTasks();
     }
   }

@@ -36,12 +36,26 @@ let tasksReady = false;
     
     tasksReady = true;
     if (window.onTasksReady) window.onTasksReady();
+    
+    // Render if we're on the tasks page
+    if (typeof getCurrentPage === 'function' && getCurrentPage() === 'tasks') {
+      if (typeof renderTasks === 'function') {
+        renderTasks();
+      }
+    }
   } catch (error) {
     console.warn("Error loading tasks (using empty list):", error.message);
     // Silently fail - use empty array
     tasks = [];
     tasksReady = true;
     if (window.onTasksReady) window.onTasksReady();
+    
+    // Render if we're on the tasks page
+    if (typeof getCurrentPage === 'function' && getCurrentPage() === 'tasks') {
+      if (typeof renderTasks === 'function') {
+        renderTasks();
+      }
+    }
   }
 })();
 

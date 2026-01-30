@@ -47,11 +47,25 @@ let groceriesReady = false;
     
     groceriesReady = true;
     if (window.onGroceriesReady) window.onGroceriesReady();
+    
+    // Render if we're on the groceries page
+    if (typeof getCurrentPage === 'function' && getCurrentPage() === 'groceries') {
+      if (typeof renderGroceries === 'function') {
+        renderGroceries();
+      }
+    }
   } catch (error) {
     console.warn("Error loading groceries (using empty list):", error.message);
     groceries = [];
     groceriesReady = true;
     if (window.onGroceriesReady) window.onGroceriesReady();
+    
+    // Render if we're on the groceries page
+    if (typeof getCurrentPage === 'function' && getCurrentPage() === 'groceries') {
+      if (typeof renderGroceries === 'function') {
+        renderGroceries();
+      }
+    }
   }
 })();
 
